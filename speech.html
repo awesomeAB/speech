@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Speech Recording</title>
+</head>
+<style type="text/css">
+    .sent_msg {
+        background:#0465ac;
+        border-radius: 12px 15px 0px 15px;
+        margin: 0;
+        color: #fff;
+        padding: 5px 10px 5px 12px;
+        float: right;
+        margin-right: 20%;
+        font-size: large;
+        display: inline-flex;
+    }
+    .received_withd_msg {
+        background: #ebebeb none repeat scroll 0 0;
+        border-radius: 0 15px 15px 0px;
+        color: #646464;
+        margin: 0;
+        padding: 5px 10px 5px 12px;
+        width: 25%;
+        font-size: large;
+        display: inline-flex;
+    }
+    .received_withd_msgg {
+        background: #ebebeb none repeat scroll 0 0;
+        border-radius: 15px 0px 0px 0px;
+        color: #646464;
+        margin: 0;
+        padding: 5px 10px 5px 12px;
+        width: 100%;
+        margin-left: 20%;
+        font-size: large;
+
+    }
+    .vl {
+        border-left: 6px solid green;
+        height: 500px;
+        display: inline;
+    }
+</style>
+<body>
+    <div id="user" style="display: inline"></div>
+
+<button onclick="foo()" id="start">Start</button>
+  <script>
+ 
+
+      const Http = new XMLHttpRequest();
+      const url='https://hackathondemo.nanorep.co/api/widget/v1/hello.js?kb=English&account=hackathondemo&url=domain.com&nostats=true';
+      Http.open("GET", url);
+      Http.setRequestHeader('accept', 'application/json');
+      Http.send();
+      var session_id;
+      var conversation_id;
+      var intent_response;
+      var dialouge_end=true;
+      var voice = window.speechSynthesis;
+      var voices = [];
+      Http.onreadystatechange=(e)=>{
+          if(Http.readyState===4 && Http.status===200)
+          {
+              session_id = JSON.parse(Http.responseText)['sessionId'];
+              console.log(session_id);
+
+              if (session_id) {
+                  const Http = new XMLHttpRequest();
+                  const url = "https://hackathondemo.nanorep.co/api/conversation/v1/create?sid="+session_id+"&kb=English&account=hackathondemo&apiKey=71b973e1-d34e-41fe-8128-02567bcff8fb";
+                  Http.open("GET", url);
+                  Http.setRequestHeader('accept', 'application/json');
+                  Http.send();
+                  Http.onreadystatechange = (e) => {
+                      if(Http.readyState===4 && Http.status===200) {
+                          conversation_id = JSON.parse(Http.responseText)['id'];
+                          console.log(conversation_id)
+                      }
+
+                  };
+              }
+          }
+
+      };
+
+
+      function getCall(URL) {
+          const Http = new XMLHttpRequest();
+          const url=URL;
+          Http.open("GET", url);
+          Http.setRequestHeader('accept', 'application/json');
+          Http.send();
+          Http.onreadystatechange=(e)=>{
+              console.log(Http.responseText)
+          }
+      }
+
+
+      async function bar() {
+          voices = voice.getVoices();
+      }
+
+      function foo() {
+          var msg = new SpeechSynthesisUtterance('Welcome to A I dot rep');
+          bar().then(function (successInfo) {
+              console.log(voices);
+          });
+
+          // voices.forEach(function (x) {
+          //     console.log(x)
+          // })
+          console.log(voices);
+          msg.voice = speechSynthesis.getVoices().filter(function (voice) {
+              return voice.name == 'Google US English';})[0];
+          voice.speak(msg);
+          document.getElementById("start").remove();
+      }
+
+      // function foo() {
+      //     const ut = new SpeechSynthesisUtterance('Welcome to A I dot rep');
+      //     speechSynthesis.speak(ut);
+      //     document.getElementById("start").remove();
+      //
+      // }
+
+      function contactBold(finalTranscript){
+          if(conversation_id){
+              const Http = new XMLHttpRequest();
+              const url = 'https://hackathondemo.nanorep.co/api/conversation/v1/statement?id='+conversation_id+'&statement='+finalTranscript;
+              Http.open("GET", url);
+              Http.setRequestHeader('accept', 'application/json');
+              Http.send();
+              Http.onreadystatechange = (e) => {
+                  if (Http.readyState === 4 && Http.status === 200) {
+                      intent_response = JSON.parse(Http.responseText)['text'];
+                      var msg = new SpeechSynthesisUtterance(intent_response);
+                      msg.voice = speechSynthesis.getVoices().filter(function (voice) {
+                          return voice.name == 'Google US English';})[0];
+                      voice.speak(msg);
+                      string= document.getElementById('user').innerHTML + '<span class="received_withd_msg">'+intent_response+"</span><br><br><span class='sent_msg'>User :";
+                      document.getElementById('user').innerHTML= string;
+
+                  }
+
+              };
+          }
+      }
+    window.SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+    let finalTranscript = '';
+    var string='<span class=\'sent_msg\'>User: ';
+    let recognition = new window.SpeechRecognition();
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 10;
+    recognition.continuous = true;
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      for (let i = event.resultIndex, len = event.results.length; i < len; i++) {
+        let transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript = transcript;
+          // document.getElementById('user').innerHTML= finalTranscript;
+          contactBold(finalTranscript);
+          string= document.getElementById('user').innerHTML+"</span><br><span class=\"received_withd_msgg\">Agent:</span>";
+
+          //Talkback
+
+
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      document.getElementById('user').innerHTML = string  + interimTranscript + '</>';
+
+    };
+
+
+    recognition.start();
+  </script>
+</body>
+</html>
